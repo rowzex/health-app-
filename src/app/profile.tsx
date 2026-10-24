@@ -72,10 +72,19 @@ export default function Targets() {
 
       {account ? (
         <Card title={tr('prof.account')}>
-          <Text style={{ color: t.ink, fontWeight: '700' }}>{account.name}</Text>
-          <Muted>{account.email}</Muted>
-          <Muted>{account.mode === 'cloud' ? tr('prof.cloudNote') : tr('prof.localNote')}</Muted>
-          <Button ghost label={tr('prof.signOut')} onPress={async () => { await endSession(); signOut(); }} />
+          {account.mode === 'guest' ? (
+            <>
+              <Muted>{tr('prof.guest')}</Muted>
+              <Button label={tr('prof.createAccount')} onPress={signOut} />
+            </>
+          ) : (
+            <>
+              <Text style={{ color: t.ink, fontWeight: '700' }}>{account.name}</Text>
+              <Muted>{account.email}</Muted>
+              <Muted>{tr('prof.localNote')}</Muted>
+              <Button ghost label={tr('prof.signOut')} onPress={async () => { await endSession(); signOut(); }} />
+            </>
+          )}
         </Card>
       ) : null}
     </Screen>

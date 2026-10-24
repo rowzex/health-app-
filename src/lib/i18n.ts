@@ -73,12 +73,15 @@ const en = {
   'ai.turnOn': 'Turn on AI coach', 'ai.badKey': "That doesn't look like a Claude API key (it starts with sk-ant-)", 'ai.isOn': 'AI coach is on',
 
   'ob.chooseLang': 'Choose your language', 'ob.langSub': 'You can change it later in Targets.', 'ob.continue': 'Continue',
-  'ob.signupTitle': 'Create your account', 'ob.loginTitle': 'Welcome back', 'ob.signupSub': 'Track your food, habits and coach chats, all in one place.',
-  'ob.name': 'Your name', 'ob.email': 'Email', 'ob.password': 'Password (at least 8 characters)', 'ob.signup': 'Sign up', 'ob.login': 'Log in',
-  'ob.haveAccount': 'Already have an account? Log in', 'ob.noAccount': 'New here? Create an account', 'ob.back': '‹ Language',
-  'ob.badEmail': 'Enter a valid email address.', 'ob.shortPass': 'Use at least 8 characters for your password.', 'ob.needName': 'Enter your name.',
-  'ob.wrong': 'Email or password is incorrect.', 'ob.exists': 'An account with this email already exists. Log in instead.', 'ob.confirm': 'Check your inbox and tap the link to confirm your email, then log in.',
-  'ob.offline': "Can't reach the server. Check your internet connection.", 'ob.noLocal': 'No account with this email on this phone. Create one instead.',
+  'ob.email': 'Email', 
+  'ob.back': '‹ Language',
+  'ob.badEmail': 'Enter a valid email address.', 
+  'ob.offline': "Can't reach the server. Check your internet connection.", 
+  'ob.title': 'Sign in or create an account', 'ob.sub': "No password needed: we'll email you a 6-digit code.", 'ob.nameOptional': 'Your name (optional)', 'ob.sendCode': 'Send code',
+  'ob.codeSent': 'We sent a 6-digit code to {email}. It can take a minute, and check your spam folder.', 'ob.code': '6-digit code', 'ob.verify': 'Continue', 'ob.resend': 'Send a new code', 'ob.changeEmail': 'Use another email',
+  'ob.skip': 'Skip for now', 'ob.skipNote': 'Your data stays on this phone. You can create an account later in Targets.', 'ob.badCode': 'That code is wrong or has expired. Try again or send a new one.',
+  'ob.tooMany': 'Too many tries. Wait a minute, then try again.', 'ob.sendFailed': "We couldn't send the code. Check the email address and try again.",
+  'prof.guest': "You're using the app without an account. Create one to keep your data safe.", 'prof.createAccount': 'Create an account',
 };
 
 export type Key = keyof typeof en;
@@ -134,12 +137,15 @@ const fr: Dict = {
   'ai.turnOn': 'Activer le coach IA', 'ai.badKey': 'Ce n\'est pas une clé API Claude (elle commence par sk-ant-)', 'ai.isOn': 'Coach IA activé',
 
   'ob.chooseLang': 'Choisissez votre langue', 'ob.langSub': 'Vous pourrez la changer dans Objectifs.', 'ob.continue': 'Continuer',
-  'ob.signupTitle': 'Créez votre compte', 'ob.loginTitle': 'Bon retour', 'ob.signupSub': 'Suivez vos repas, vos habitudes et vos discussions avec le coach, au même endroit.',
-  'ob.name': 'Votre prénom', 'ob.email': 'E-mail', 'ob.password': 'Mot de passe (8 caractères minimum)', 'ob.signup': "S'inscrire", 'ob.login': 'Se connecter',
-  'ob.haveAccount': 'Déjà un compte ? Se connecter', 'ob.noAccount': 'Nouveau ? Créer un compte', 'ob.back': '‹ Langue',
-  'ob.badEmail': 'Entrez une adresse e-mail valide.', 'ob.shortPass': 'Utilisez au moins 8 caractères.', 'ob.needName': 'Entrez votre prénom.',
-  'ob.wrong': 'E-mail ou mot de passe incorrect.', 'ob.exists': 'Un compte existe déjà avec cet e-mail. Connectez-vous.', 'ob.confirm': 'Ouvrez votre boîte mail et touchez le lien pour confirmer, puis connectez-vous.',
-  'ob.offline': 'Impossible de joindre le serveur. Vérifiez votre connexion.', 'ob.noLocal': 'Aucun compte avec cet e-mail sur ce téléphone. Créez-en un.',
+  'ob.email': 'E-mail', 
+  'ob.back': '‹ Langue',
+  'ob.badEmail': 'Entrez une adresse e-mail valide.', 
+  'ob.offline': 'Impossible de joindre le serveur. Vérifiez votre connexion.', 
+  'ob.title': 'Connectez-vous ou créez un compte', 'ob.sub': 'Pas de mot de passe : nous vous envoyons un code à 6 chiffres par e-mail.', 'ob.nameOptional': 'Votre prénom (facultatif)', 'ob.sendCode': 'Envoyer le code',
+  'ob.codeSent': "Code à 6 chiffres envoyé à {email}. Cela peut prendre une minute ; pensez à vérifier vos spams.", 'ob.code': 'Code à 6 chiffres', 'ob.verify': 'Continuer', 'ob.resend': 'Renvoyer un code', 'ob.changeEmail': 'Utiliser un autre e-mail',
+  'ob.skip': 'Passer pour le moment', 'ob.skipNote': 'Vos données restent sur ce téléphone. Vous pourrez créer un compte plus tard dans Objectifs.', 'ob.badCode': 'Code incorrect ou expiré. Réessayez ou demandez-en un nouveau.',
+  'ob.tooMany': "Trop d'essais. Attendez une minute puis réessayez.", 'ob.sendFailed': "Impossible d'envoyer le code. Vérifiez l'adresse e-mail et réessayez.",
+  'prof.guest': 'Vous utilisez l\'app sans compte. Créez-en un pour garder vos données en sécurité.', 'prof.createAccount': 'Créer un compte',
 };
 
 const ar: Dict = {
@@ -192,12 +198,15 @@ const ar: Dict = {
   'ai.turnOn': 'فعّل المدرب الذكي', 'ai.badKey': 'هذا لا يبدو مفتاح Claude API (يبدأ بـ sk-ant-)', 'ai.isOn': 'المدرب الذكي مفعّل',
 
   'ob.chooseLang': 'اختر لغتك', 'ob.langSub': 'يمكنك تغييرها لاحقا من الأهداف.', 'ob.continue': 'متابعة',
-  'ob.signupTitle': 'أنشئ حسابك', 'ob.loginTitle': 'مرحبا بعودتك', 'ob.signupSub': 'تابع طعامك وعاداتك ومحادثاتك مع المدرب في مكان واحد.',
-  'ob.name': 'اسمك', 'ob.email': 'البريد الإلكتروني', 'ob.password': 'كلمة المرور (8 أحرف على الأقل)', 'ob.signup': 'إنشاء حساب', 'ob.login': 'تسجيل الدخول',
-  'ob.haveAccount': 'لديك حساب؟ سجّل الدخول', 'ob.noAccount': 'جديد هنا؟ أنشئ حسابا', 'ob.back': '‹ اللغة',
-  'ob.badEmail': 'أدخل بريدا إلكترونيا صحيحا.', 'ob.shortPass': 'استخدم 8 أحرف على الأقل.', 'ob.needName': 'أدخل اسمك.',
-  'ob.wrong': 'البريد أو كلمة المرور غير صحيحة.', 'ob.exists': 'يوجد حساب بهذا البريد. سجّل الدخول بدلا من ذلك.', 'ob.confirm': 'افتح بريدك واضغط الرابط لتأكيد حسابك، ثم سجّل الدخول.',
-  'ob.offline': 'تعذر الوصول إلى الخادم. تحقق من اتصالك.', 'ob.noLocal': 'لا يوجد حساب بهذا البريد على هذا الهاتف. أنشئ حسابا.',
+  'ob.email': 'البريد الإلكتروني', 
+  'ob.back': '‹ اللغة',
+  'ob.badEmail': 'أدخل بريدا إلكترونيا صحيحا.', 
+  'ob.offline': 'تعذر الوصول إلى الخادم. تحقق من اتصالك.', 
+  'ob.title': 'سجّل الدخول أو أنشئ حسابا', 'ob.sub': 'بدون كلمة مرور: سنرسل لك رمزا من 6 أرقام عبر البريد.', 'ob.nameOptional': 'اسمك (اختياري)', 'ob.sendCode': 'أرسل الرمز',
+  'ob.codeSent': 'أرسلنا رمزا من 6 أرقام إلى {email}. قد يستغرق دقيقة، وتحقق من مجلد الرسائل غير المرغوب فيها.', 'ob.code': 'رمز من 6 أرقام', 'ob.verify': 'متابعة', 'ob.resend': 'أرسل رمزا جديدا', 'ob.changeEmail': 'استخدم بريدا آخر',
+  'ob.skip': 'تخطَّ الآن', 'ob.skipNote': 'تبقى بياناتك على هذا الهاتف. يمكنك إنشاء حساب لاحقا من الأهداف.', 'ob.badCode': 'الرمز خاطئ أو منتهي الصلاحية. حاول مجددا أو اطلب رمزا جديدا.',
+  'ob.tooMany': 'محاولات كثيرة. انتظر دقيقة ثم حاول مجددا.', 'ob.sendFailed': 'تعذر إرسال الرمز. تحقق من البريد وحاول مجددا.',
+  'prof.guest': 'أنت تستخدم التطبيق بدون حساب. أنشئ حسابا للحفاظ على بياناتك.', 'prof.createAccount': 'إنشاء حساب',
 };
 
 const es: Dict = {
@@ -250,12 +259,15 @@ const es: Dict = {
   'ai.turnOn': 'Activar coach IA', 'ai.badKey': 'Eso no parece una clave API de Claude (empieza por sk-ant-)', 'ai.isOn': 'Coach IA activado',
 
   'ob.chooseLang': 'Elige tu idioma', 'ob.langSub': 'Puedes cambiarlo luego en Objetivos.', 'ob.continue': 'Continuar',
-  'ob.signupTitle': 'Crea tu cuenta', 'ob.loginTitle': 'Hola de nuevo', 'ob.signupSub': 'Sigue tu comida, tus hábitos y tus charlas con el coach en un solo lugar.',
-  'ob.name': 'Tu nombre', 'ob.email': 'Correo electrónico', 'ob.password': 'Contraseña (mínimo 8 caracteres)', 'ob.signup': 'Registrarme', 'ob.login': 'Iniciar sesión',
-  'ob.haveAccount': '¿Ya tienes cuenta? Inicia sesión', 'ob.noAccount': '¿Eres nuevo? Crea una cuenta', 'ob.back': '‹ Idioma',
-  'ob.badEmail': 'Introduce un correo válido.', 'ob.shortPass': 'Usa al menos 8 caracteres.', 'ob.needName': 'Introduce tu nombre.',
-  'ob.wrong': 'Correo o contraseña incorrectos.', 'ob.exists': 'Ya existe una cuenta con este correo. Inicia sesión.', 'ob.confirm': 'Abre tu correo y toca el enlace para confirmar, luego inicia sesión.',
-  'ob.offline': 'No se puede contactar al servidor. Revisa tu conexión.', 'ob.noLocal': 'No hay ninguna cuenta con este correo en este móvil. Crea una.',
+  'ob.email': 'Correo electrónico', 
+  'ob.back': '‹ Idioma',
+  'ob.badEmail': 'Introduce un correo válido.', 
+  'ob.offline': 'No se puede contactar al servidor. Revisa tu conexión.', 
+  'ob.title': 'Inicia sesión o crea una cuenta', 'ob.sub': 'Sin contraseña: te enviamos un código de 6 dígitos por correo.', 'ob.nameOptional': 'Tu nombre (opcional)', 'ob.sendCode': 'Enviar código',
+  'ob.codeSent': 'Enviamos un código de 6 dígitos a {email}. Puede tardar un minuto; revisa también el spam.', 'ob.code': 'Código de 6 dígitos', 'ob.verify': 'Continuar', 'ob.resend': 'Enviar otro código', 'ob.changeEmail': 'Usar otro correo',
+  'ob.skip': 'Omitir por ahora', 'ob.skipNote': 'Tus datos se quedan en este móvil. Puedes crear una cuenta luego en Objetivos.', 'ob.badCode': 'El código es incorrecto o ha caducado. Inténtalo de nuevo o pide otro.',
+  'ob.tooMany': 'Demasiados intentos. Espera un minuto y vuelve a intentarlo.', 'ob.sendFailed': 'No pudimos enviar el código. Revisa el correo e inténtalo de nuevo.',
+  'prof.guest': 'Usas la app sin cuenta. Crea una para guardar tus datos de forma segura.', 'prof.createAccount': 'Crear una cuenta',
 };
 
 const DICTS: Record<Lang, Dict> = { en, fr, ar, es };
