@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 
+import { FadeIn, haptic, Pop, useToast } from '../components/motion';
 import { Button, Card, DayHeader, Muted, Screen, styles } from '../components/ui';
 import { dateKey, isDone, shiftKey, streak } from '../lib/model';
 import { useStore } from '../lib/store';
@@ -11,12 +12,15 @@ export default function Habits() {
   const { profile, days, day, toggleHabit, addHabit, removeHabit } = useStore();
   const [name, setName] = useState('');
   const [editing, setEditing] = useState(false);
+  const toast = useToast();
   const today = dateKey(new Date());
   const doneCount = profile.habits.filter((h) => isDone(h, day, profile)).length;
 
   const submit = () => {
     if (!name.trim()) return;
     addHabit(name.trim());
+    haptic.success();
+    toast('Habit added');
     setName('');
   };
 
@@ -28,17 +32,27 @@ export default function Habits() {
         right={<Pressable onPress={() => setEditing(!editing)}><Text style={{ color: t.accent, fontWeight: '600' }}>{editing ? 'Done' : 'Edit'}</Text></Pressable>}
       >
         {profile.habits.length === 0 ? <Muted>Add your first habit below.</Muted> : null}
-        {profile.habits.map((h) => {
+        {profile.habits.map((h, i) => {
           const on = isDone(h, day, profile);
           const s = streak(h, days, profile);
           return (
-            <View key={h.id} style={[styles.rowBetween, { gap: 12, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: t.line }]}>
+            <FadeIn key={h.id} delay={i * 40}>
+            <View style={[styles.rowBetween, { gap: 12, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: t.line }]}>
               <Pressable
                 accessibilityRole="checkbox" accessibilityState={{ checked: on, disabled: !!h.auto }} accessibilityLabel={h.name}
-                disabled={!!h.auto} onPress={() => toggleHabit(h.id)}
+                disabled={!!h.auto}
+                onPress={() => {
+                  if (!on) {
+                    haptic.success();
+                    if (s + 1 >= 2) toast(`${s + 1}-day streak on "${h.name}"`);
+                  } else haptic.soft();
+                  toggleHabit(h.id);
+                }}
                 style={{ width: 32, height: 32, borderRadius: 8, borderWidth: 2, borderColor: on ? t.good : t.line, backgroundColor: on ? t.good : 'transparent', alignItems: 'center', justifyContent: 'center' }}
               >
-                <Text style={{ color: on ? '#fff' : 'transparent', fontWeight: '800' }}>✓</Text>
+                <Pop trigger={on}>
+                  <Text style={{ color: on ? '#fff' : 'transparent', fontWeight: '800' }}>✓</Text>
+                </Pop>
               </Pressable>
               <View style={{ flex: 1 }}>
                 <Text style={{ color: t.ink, fontWeight: '500' }}>{h.name}</Text>
@@ -51,13 +65,16 @@ export default function Habits() {
                 </View>
               </View>
               {editing ? (
-                <Pressable onPress={() => removeHabit(h.id)} hitSlop={8} accessibilityLabel={`Delete ${h.name}`}>
+                <Pressable onPress={() => { haptic.soft(); removeHabit(h.id); }} hitSlop={8} accessibilityLabel={`Delete ${h.name}`}>
                   <Text style={{ color: t.warn, fontWeight: '600' }}>Delete</Text>
                 </Pressable>
               ) : (
-                <Text style={{ color: s >= 3 ? t.accent : t.ink, fontWeight: '800', fontSize: 18, minWidth: 40, textAlign: 'right' }}>{s}d</Text>
+                <Pop trigger={s}>
+                  <Text style={{ color: s >= 3 ? t.accent : t.ink, fontWeight: '800', fontSize: 18, minWidth: 40, textAlign: 'right' }}>{s >= 3 ? '🔥' : ''}{s}d</Text>
+                </Pop>
               )}
             </View>
+            </FadeIn>
           );
         })}
         <View style={{ flexDirection: 'row', gap: 8 }}>

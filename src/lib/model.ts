@@ -1,7 +1,7 @@
 export type Meal = 'Breakfast' | 'Lunch' | 'Dinner' | 'Snack';
 export const MEALS: Meal[] = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
 
-export type Entry = { id: string; name: string; kcal: number; p: number; c: number; f: number; meal: Meal };
+export type Entry = { id: string; name: string; kcal: number; p: number; c: number; f: number; meal: Meal; img?: string };
 export type Day = { meals: Entry[]; water: number; done: string[] };
 export type Habit = { id: string; name: string; note?: string; auto?: 'water' | 'protein' };
 

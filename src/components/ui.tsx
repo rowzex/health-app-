@@ -1,11 +1,23 @@
-import { ReactNode } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextStyle, View, ViewStyle } from 'react-native';
+import { ReactNode, useEffect, useRef } from 'react';
+import { Animated, Easing, Pressable, ScrollView, StyleSheet, Text, TextStyle, View, ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 
 import { dateKey, shiftKey } from '../lib/model';
 import { useStore } from '../lib/store';
 import { useTheme } from '../theme';
+import { haptic, PressScale } from './motion';
+
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+
+/** Animates toward `value` whenever it changes. */
+function useTween(value: number, duration = 650) {
+  const v = useRef(new Animated.Value(value)).current;
+  useEffect(() => {
+    Animated.timing(v, { toValue: value, duration, easing: Easing.out(Easing.cubic), useNativeDriver: false }).start();
+  }, [value, v, duration]);
+  return v;
+}
 
 export function Screen({ children, scroll = true }: { children: ReactNode; scroll?: boolean }) {
   const t = useTheme();
@@ -40,18 +52,15 @@ export function Card({ title, right, children, style }: { title?: string; right?
 export function Button({ label, onPress, ghost, small, disabled }: { label: string; onPress: () => void; ghost?: boolean; small?: boolean; disabled?: boolean }) {
   const t = useTheme();
   return (
-    <Pressable
+    <PressScale
       accessibilityRole="button"
-      onPress={onPress}
+      accessibilityState={{ disabled }}
+      onPress={() => { haptic.tap(); onPress(); }}
       disabled={disabled}
-      style={({ pressed }) => [
-        styles.btn,
-        small && styles.btnSmall,
-        { backgroundColor: ghost ? t.chip : t.accent, opacity: disabled ? 0.4 : pressed ? 0.8 : 1 },
-      ]}
+      style={[styles.btn, small && styles.btnSmall, { backgroundColor: ghost ? t.chip : t.accent, opacity: disabled ? 0.4 : 1 }]}
     >
       <Text style={{ color: ghost ? t.ink : t.accentInk, fontWeight: '600', fontSize: small ? 13 : 15 }}>{label}</Text>
-    </Pressable>
+    </PressScale>
   );
 }
 
@@ -67,13 +76,15 @@ export function Ring({ value, goal, size = 168 }: { value: number; goal: number;
   const c = 2 * Math.PI * r;
   const pct = Math.min(1, goal > 0 ? value / goal : 0);
   const left = Math.round(goal - value);
+  const progress = useTween(pct);
   return (
     <View style={{ width: size, height: size }}>
       <Svg width={size} height={size} viewBox="0 0 120 120" style={{ transform: [{ rotate: '-90deg' }] }}>
         <Circle cx={60} cy={60} r={r} stroke={t.chip} strokeWidth={14} fill="none" />
-        <Circle
+        <AnimatedCircle
           cx={60} cy={60} r={r} fill="none" strokeWidth={14} strokeLinecap="round"
-          stroke={left < 0 ? t.warn : t.accent} strokeDasharray={`${c}`} strokeDashoffset={c * (1 - pct)}
+          stroke={left < 0 ? t.warn : t.accent} strokeDasharray={`${c}`}
+          strokeDashoffset={progress.interpolate({ inputRange: [0, 1], outputRange: [c, 0] })}
         />
       </Svg>
       <View style={[StyleSheet.absoluteFill, styles.center]}>
@@ -86,6 +97,7 @@ export function Ring({ value, goal, size = 168 }: { value: number; goal: number;
 
 export function MacroBar({ label, value, goal, color }: { label: string; value: number; goal: number; color: string }) {
   const t = useTheme();
+  const w = useTween(Math.min(100, goal ? (value / goal) * 100 : 0));
   return (
     <View style={{ gap: 5 }}>
       <View style={styles.rowBetween}>
@@ -95,7 +107,7 @@ export function MacroBar({ label, value, goal, color }: { label: string; value: 
         </Text>
       </View>
       <View style={[styles.bar, { backgroundColor: t.chip }]}>
-        <View style={{ width: `${Math.min(100, goal ? (value / goal) * 100 : 0)}%`, height: '100%', borderRadius: 4, backgroundColor: color }} />
+        <Animated.View style={{ width: w.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] }), height: '100%', borderRadius: 4, backgroundColor: color }} />
       </View>
     </View>
   );
@@ -114,12 +126,12 @@ export function DayHeader({ title }: { title: string }) {
     <View style={styles.dayHeader}>
       <Text style={[styles.brand, { color: t.ink }]}>{title}</Text>
       <View style={styles.dayNav}>
-        <Pressable accessibilityLabel="Previous day" onPress={() => setDate(shiftKey(date, -1))} style={[styles.navBtn, { borderColor: t.line }]}>
+        <Pressable accessibilityLabel="Previous day" onPress={() => { haptic.tap(); setDate(shiftKey(date, -1)); }} style={[styles.navBtn, { borderColor: t.line }]}>
           <Text style={{ color: t.ink, fontSize: 18 }}>‹</Text>
         </Pressable>
         <Text style={[styles.dayLabel, { color: t.ink }]}>{label.toUpperCase()}</Text>
         <Pressable
-          accessibilityLabel="Next day" disabled={date >= today} onPress={() => setDate(shiftKey(date, 1))}
+          accessibilityLabel="Next day" disabled={date >= today} onPress={() => { haptic.tap(); setDate(shiftKey(date, 1)); }}
           style={[styles.navBtn, { borderColor: t.line, opacity: date >= today ? 0.35 : 1 }]}
         >
           <Text style={{ color: t.ink, fontSize: 18 }}>›</Text>

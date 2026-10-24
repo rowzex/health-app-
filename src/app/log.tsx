@@ -1,28 +1,28 @@
 import { useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 
+import { FadeIn, haptic, PressScale, useToast } from '../components/motion';
+import { FoodThumb } from '../components/recipe';
 import { Button, Card, Muted, Screen, styles } from '../components/ui';
 import { Food, searchFoods } from '../lib/foods';
 import { Meal, MEALS } from '../lib/model';
+import { mealForNow } from '../lib/recipes';
 import { useStore } from '../lib/store';
 import { useTheme } from '../theme';
 
-function defaultMeal(): Meal {
-  const h = new Date().getHours();
-  return h < 11 ? 'Breakfast' : h < 15 ? 'Lunch' : h < 21 ? 'Dinner' : 'Snack';
-}
 
 export default function LogFood() {
   const t = useTheme();
   const { addEntry } = useStore();
+  const toast = useToast();
   const [q, setQ] = useState('');
-  const [meal, setMeal] = useState<Meal>(defaultMeal);
-  const [added, setAdded] = useState('');
+  const [meal, setMeal] = useState<Meal>(mealForNow);
   const [custom, setCustom] = useState({ name: '', kcal: '', p: '', c: '', f: '' });
 
   const add = (f: Food) => {
     addEntry({ ...f, meal });
-    setAdded(`Added ${f.name} to ${meal}`);
+    haptic.success();
+    toast(`Added ${f.name} to ${meal}`);
   };
   const addCustom = () => {
     const kcal = Number(custom.kcal);
@@ -37,26 +37,28 @@ export default function LogFood() {
       <Card title="Log food">
         <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
           {MEALS.map((m) => (
-            <Chip key={m} label={m} on={m === meal} onPress={() => setMeal(m)} />
+            <Chip key={m} label={m} on={m === meal} onPress={() => { haptic.tap(); setMeal(m); }} />
           ))}
         </View>
         <TextInput
           value={q} onChangeText={setQ} placeholder="Search foods: chicken, oats, banana…"
           placeholderTextColor={t.muted} style={input} autoCorrect={false} clearButtonMode="while-editing"
         />
-        {added ? <Text style={{ color: t.good, fontWeight: '600' }}>{added}</Text> : null}
         <View style={{ gap: 2 }}>
-          {searchFoods(q).map((f) => (
-            <Pressable
-              key={f.name} onPress={() => add(f)}
-              style={({ pressed }) => [styles.rowBetween, { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: t.line, opacity: pressed ? 0.6 : 1 }]}
+          {searchFoods(q).map((f, i) => (
+            <FadeIn key={f.name} delay={Math.min(i, 8) * 25}>
+            <PressScale
+              onPress={() => add(f)} accessibilityRole="button" accessibilityLabel={`Add ${f.name}`}
+              style={[styles.rowBetween, { paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: t.line, gap: 10 }]}
             >
+              <FoodThumb img={f.img} name={f.name} size={40} />
               <View style={{ flex: 1 }}>
                 <Text style={{ color: t.ink }}>{f.name}</Text>
                 <Muted style={{ fontSize: 12 }}>P {f.p}g · C {f.c}g · F {f.f}g</Muted>
               </View>
               <Text style={{ color: t.ink, fontWeight: '700' }}>{f.kcal} kcal  <Text style={{ color: t.accent }}>＋</Text></Text>
-            </Pressable>
+            </PressScale>
+            </FadeIn>
           ))}
           {searchFoods(q).length === 0 ? <Muted>No match. Add it as a custom food below.</Muted> : null}
         </View>

@@ -1,0 +1,122 @@
+import * as Haptics from 'expo-haptics';
+import { createContext, ReactNode, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { AccessibilityInfo, Animated, Easing, Platform, Pressable, PressableProps, StyleProp, Text, View, ViewStyle } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { useTheme } from '../theme';
+
+const native = Platform.OS !== 'web';
+
+/** Light haptic taps; silently does nothing where unsupported. */
+export const haptic = {
+  tap: () => native && Haptics.selectionAsync().catch(() => {}),
+  success: () => native && Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}),
+  soft: () => native && Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}),
+};
+
+let reduceMotion = false;
+AccessibilityInfo.isReduceMotionEnabled?.().then((v) => (reduceMotion = v)).catch(() => {});
+
+/** Fades and lifts its children in when first shown. */
+export function FadeIn({ children, delay = 0, style }: { children: ReactNode; delay?: number; style?: StyleProp<ViewStyle> }) {
+  const v = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
+  useEffect(() => {
+    Animated.timing(v, { toValue: 1, duration: 320, delay, easing: Easing.out(Easing.cubic), useNativeDriver: native }).start();
+  }, [v, delay]);
+  return (
+    <Animated.View style={[style, { opacity: v, transform: [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }] }]}>
+      {children}
+    </Animated.View>
+  );
+}
+
+/** A Pressable that shrinks slightly while pressed. */
+export function PressScale({ children, style, onPressIn, onPressOut, ...rest }: PressableProps & { style?: StyleProp<ViewStyle>; children: ReactNode }) {
+  const scale = useRef(new Animated.Value(1)).current;
+  const to = (value: number) => Animated.spring(scale, { toValue: value, useNativeDriver: native, speed: 40, bounciness: 6 }).start();
+  return (
+    <Pressable
+      {...rest}
+      onPressIn={(e) => { to(0.96); onPressIn?.(e); }}
+      onPressOut={(e) => { to(1); onPressOut?.(e); }}
+    >
+      <Animated.View style={[style, { transform: [{ scale }] }]}>{children}</Animated.View>
+    </Pressable>
+  );
+}
+
+/** Pops once each time `trigger` changes, e.g. when a habit is ticked. */
+export function Pop({ trigger, children }: { trigger: unknown; children: ReactNode }) {
+  const s = useRef(new Animated.Value(1)).current;
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) { first.current = false; return; }
+    s.setValue(0.8);
+    Animated.spring(s, { toValue: 1, useNativeDriver: native, speed: 18, bounciness: 14 }).start();
+  }, [trigger, s]);
+  return <Animated.View style={{ transform: [{ scale: s }] }}>{children}</Animated.View>;
+}
+
+export function TypingDots() {
+  const t = useTheme();
+  const dots = [useRef(new Animated.Value(0)).current, useRef(new Animated.Value(0)).current, useRef(new Animated.Value(0)).current];
+  useEffect(() => {
+    const loops = dots.map((d, i) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(i * 140),
+          Animated.timing(d, { toValue: 1, duration: 280, useNativeDriver: native }),
+          Animated.timing(d, { toValue: 0, duration: 280, useNativeDriver: native }),
+          Animated.delay((2 - i) * 140),
+        ]),
+      ),
+    );
+    loops.forEach((l) => l.start());
+    return () => loops.forEach((l) => l.stop());
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  return (
+    <View style={{ flexDirection: 'row', gap: 5, padding: 14, alignSelf: 'flex-start', backgroundColor: t.surface, borderRadius: 14, borderWidth: 1, borderColor: t.line }} accessibilityLabel="Coach is typing">
+      {dots.map((d, i) => (
+        <Animated.View key={i} style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: t.muted, transform: [{ translateY: d.interpolate({ inputRange: [0, 1], outputRange: [0, -5] }) }] }} />
+      ))}
+    </View>
+  );
+}
+
+// ---------- toast ----------
+
+const ToastCtx = createContext<(msg: string) => void>(() => {});
+export const useToast = () => useContext(ToastCtx);
+
+export function ToastProvider({ children }: { children: ReactNode }) {
+  const t = useTheme();
+  const insets = useSafeAreaInsets();
+  const [msg, setMsg] = useState('');
+  const v = useRef(new Animated.Value(0)).current;
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const show = useCallback(
+    (m: string) => {
+      setMsg(m);
+      if (timer.current) clearTimeout(timer.current);
+      Animated.spring(v, { toValue: 1, useNativeDriver: native, speed: 20, bounciness: 8 }).start();
+      timer.current = setTimeout(() => Animated.timing(v, { toValue: 0, duration: 200, useNativeDriver: native }).start(), 1800);
+    },
+    [v],
+  );
+  return (
+    <ToastCtx.Provider value={show}>
+      {children}
+      <Animated.View
+        pointerEvents="none"
+        style={{
+          position: 'absolute', left: 16, right: 16, top: insets.top + 8, alignItems: 'center',
+          opacity: v, transform: [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }],
+        }}
+      >
+        <View style={{ backgroundColor: t.ink, paddingVertical: 10, paddingHorizontal: 16, borderRadius: 12 }} accessibilityLiveRegion="polite">
+          <Text style={{ color: t.bg, fontWeight: '600' }}>{msg}</Text>
+        </View>
+      </Animated.View>
+    </ToastCtx.Provider>
+  );
+}
