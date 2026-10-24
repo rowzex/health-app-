@@ -13,12 +13,7 @@
       "predictiveBackGestureEnabled": false,
       "package": "com.fuelandform.app"
     },
-    "web": {
-      "output": "single"
-    },
-    "scheme": "fuelandform",
-    "plugins": [
-      "expo-router"
-    ]
+    "web": {},
+    "scheme": "fuelandform"
   }
 }
