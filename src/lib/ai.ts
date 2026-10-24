@@ -1,4 +1,3 @@
-import Anthropic from '@anthropic-ai/sdk';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
@@ -81,9 +80,7 @@ export type Turn = { role: 'user' | 'assistant'; content: string; recipes?: Reci
 export class CoachError extends Error {}
 
 export async function askClaude(apiKey: string, history: Turn[], question: string, data: unknown, alreadySuggested: string[]): Promise<{ text: string; recipes: Recipe[] }> {
-  const client = new Anthropic({ apiKey, maxRetries: 1 });
-
-  const past: Anthropic.Beta.BetaMessageParam[] = history.slice(-12).map((t) => ({
+  const past: { role: 'user' | 'assistant'; content: string }[] = history.slice(-12).map((t) => ({
     role: t.role,
     content: t.recipes?.length ? `${t.content}\n\n[Recipes suggested: ${t.recipes.map((r) => r.title).join('; ')}]` : t.content,
   }));
@@ -94,28 +91,39 @@ export async function askClaude(apiKey: string, history: Turn[], question: strin
     `${question}\n\n<today>\n${JSON.stringify(data)}\n</today>\n` +
     (alreadySuggested.length ? `<already_suggested>\n${alreadySuggested.slice(-40).join('\n')}\n</already_suggested>` : '');
 
-  let response: Anthropic.Beta.BetaMessage;
+  // Plain fetch instead of the SDK: the SDK's module graph doesn't load under Expo Go's bundler.
+  let res: Response;
   try {
-    response = await client.beta.messages.create({
-      model: 'claude-opus-5-5',
-      max_tokens: 16000,
-      system: SYSTEM,
-      messages: [...past, { role: 'user', content: prompt }],
-      output_config: { effort: 'low', format: { type: 'json_schema', schema: SCHEMA } },
-      betas: ['server-side-fallback-2026-07-01'],
-      fallbacks: 'default',
+    res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-beta': 'server-side-fallback-2026-07-01',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'claude-opus-5-5',
+        max_tokens: 16000,
+        system: SYSTEM,
+        messages: [...past, { role: 'user', content: prompt }],
+        output_config: { effort: 'low', format: { type: 'json_schema', schema: SCHEMA } },
+        fallbacks: 'default',
+      }),
     });
-  } catch (e) {
-    if (e instanceof Anthropic.AuthenticationError) throw new CoachError('Your Claude API key was rejected. Check it in Targets → AI coach.');
-    if (e instanceof Anthropic.PermissionDeniedError) throw new CoachError("Your API key doesn't have access to this model.");
-    if (e instanceof Anthropic.RateLimitError) throw new CoachError('The coach is busy right now. Try again in a minute.');
-    if (e instanceof Anthropic.APIConnectionError) throw new CoachError("Can't reach the coach. Check your internet connection.");
-    if (e instanceof Anthropic.APIError) throw new CoachError(`The coach had a problem (${e.status ?? 'error'}). Try again.`);
-    throw e;
+  } catch {
+    throw new CoachError("Can't reach the coach. Check your internet connection.");
   }
 
+  if (res.status === 401) throw new CoachError('Your Claude API key was rejected. Check it in Targets → AI coach.');
+  if (res.status === 403) throw new CoachError("Your API key doesn't have access to this model.");
+  if (res.status === 429 || res.status === 529) throw new CoachError('The coach is busy right now. Try again in a minute.');
+  if (!res.ok) throw new CoachError(`The coach had a problem (${res.status}). Try again.`);
+
+  const response = (await res.json()) as { stop_reason: string; content: { type: string; text?: string }[] };
+
   if (response.stop_reason === 'refusal') throw new CoachError("The coach can't help with that one. Try asking another way.");
-  const text = response.content.map((b) => (b.type === 'text' ? b.text : '')).join('');
+  const text = response.content.map((b) => (b.type === 'text' ? b.text ?? '' : '')).join('');
   let raw: Raw;
   try {
     raw = JSON.parse(text) as Raw;
