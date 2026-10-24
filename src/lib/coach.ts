@@ -22,12 +22,13 @@ export function snapshot(profile: Profile, days: Record<string, Day>, date: stri
 }
 
 /** Same question on the same day with the same log gives the same answer; anything else gets a fresh one. */
-export function answerKey(question: string, profile: Profile, days: Record<string, Day>, date: string): string {
+export function answerKey(question: string, profile: Profile, days: Record<string, Day>, date: string, lang = 'en'): string {
   const day = days[date];
   const s = totals(day);
   const done = profile.habits.filter((h) => isDone(h, day, profile)).length;
-  const q = question.toLowerCase().replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim();
-  return `${date}|${Math.round(s.kcal)}|${Math.round(s.p)}|${day?.water ?? 0}|${done}|${q}`;
+  // Strip punctuation only, so Arabic and accented questions still match themselves.
+  const q = question.toLowerCase().replace(/[.,!?;:'"()¿¡،؟«»…-]/g, '').replace(/\s+/g, ' ').trim();
+  return `${lang}|${date}|${Math.round(s.kcal)}|${Math.round(s.p)}|${day?.water ?? 0}|${done}|${q}`;
 }
 
 export type CoachAnswer = { text: string; recipes: Recipe[]; usedTips?: string[] };
@@ -40,11 +41,12 @@ export type CoachContext = {
   history: Turn[];
   suggested: string[];
   usedTips: string[];
+  language: string; // e.g. 'French', for the AI's replies
 };
 
 export async function askCoach(question: string, ctx: CoachContext): Promise<CoachAnswer> {
   if (ctx.apiKey) {
-    return askClaude(ctx.apiKey, ctx.history, question, snapshot(ctx.profile, ctx.days, ctx.date), ctx.suggested);
+    return askClaude(ctx.apiKey, ctx.history, question, snapshot(ctx.profile, ctx.days, ctx.date), ctx.suggested, ctx.language);
   }
   return builtInAnswer(question, ctx);
 }

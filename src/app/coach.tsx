@@ -1,22 +1,23 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, ScrollViewInstance, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, ScrollViewInstance, Text, TextInput, View } from 'react-native';
 
 import { FadeIn, haptic, TypingDots } from '../components/motion';
 import { RecipeCard, RecipeSheet } from '../components/recipe';
-import { Button, Muted, Screen, styles } from '../components/ui';
+import { Bubble, Button, Muted, Screen, styles } from '../components/ui';
 import { AI_SUPPORTED, loadApiKey } from '../lib/ai';
 import { answerKey, askCoach, CoachError } from '../lib/coach';
+import { LANG_FOR_AI } from '../lib/i18n';
 import { Recipe } from '../lib/recipes';
 import { useStore } from '../lib/store';
 import { useTheme } from '../theme';
 
-const PROMPTS = ['How am I doing today?', 'High-protein dinner idea', 'Quick healthy snack', 'Plan my meals for tomorrow', 'Which habit should I focus on?'];
+const PROMPTS = ['coach.p1', 'coach.p2', 'coach.p3', 'coach.p4', 'coach.p5'] as const;
 
 export default function Coach() {
   const t = useTheme();
   const store = useStore();
-  const { profile, days, date, coach, recordAnswer, clearChat } = store;
+  const { profile, days, date, coach, recordAnswer, clearChat, t: tr, lang } = store;
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -32,7 +33,7 @@ export default function Coach() {
     haptic.tap();
     setText('');
     setError('');
-    const key = answerKey(question, profile, days, date);
+    const key = answerKey(question, profile, days, date, lang ?? 'en');
     const same = coach.answers[key];
     if (same) {
       recordAnswer(question, key, same); // same question, same day: same answer
@@ -40,11 +41,11 @@ export default function Coach() {
     }
     setBusy(true);
     try {
-      const answer = await askCoach(question, { apiKey, profile, days, date, history: coach.chat, suggested: coach.suggested, usedTips: coach.usedTips });
+      const answer = await askCoach(question, { apiKey, profile, days, date, history: coach.chat, suggested: coach.suggested, usedTips: coach.usedTips, language: LANG_FOR_AI[lang ?? 'en'] });
       recordAnswer(question, key, answer);
       haptic.success();
     } catch (e) {
-      setError(e instanceof CoachError ? e.message : 'Something went wrong. Try again.');
+      setError(e instanceof CoachError ? tr(`err.${e.code}`) : tr('err.other'));
       setText(question);
     } finally {
       setBusy(false);
@@ -52,23 +53,24 @@ export default function Coach() {
   };
 
   return (
-    <Screen scroll={false}>
+    <Screen scroll={false} onKeyboard={() => scroller.current?.scrollToEnd({ animated: true })}>
       <View style={styles.rowBetween}>
-        <Text style={[styles.brand, { color: t.ink }]}>Coach</Text>
-        {coach.chat.length ? <Pressable onPress={() => { haptic.tap(); clearChat(); }}><Text style={{ color: t.muted, fontWeight: '600' }}>New chat</Text></Pressable> : null}
+        <Text style={[styles.brand, { color: t.ink }]}>{tr('coach.title')}</Text>
+        {coach.chat.length ? <Pressable onPress={() => { haptic.tap(); clearChat(); }}><Text style={{ color: t.muted, fontWeight: '600' }}>{tr('coach.newChat')}</Text></Pressable> : null}
       </View>
       {!apiKey ? (
         <Pressable onPress={() => router.push('/profile')} style={{ backgroundColor: t.chip, borderRadius: 10, padding: 10 }}>
           <Text style={{ color: t.ink, fontSize: 13 }}>
-            {AI_SUPPORTED ? 'Using built-in tips. ' : 'The web preview uses built-in tips. '}
-            {AI_SUPPORTED ? <Text style={{ color: t.accent, fontWeight: '700' }}>Add your Claude API key ›</Text> : 'Open the app on your phone for the AI coach.'}
+            {AI_SUPPORTED ? tr('coach.builtIn') : tr('coach.webBuiltIn')}
+            {AI_SUPPORTED ? <Text style={{ color: t.accent, fontWeight: '700' }}>{tr('coach.addKey')}</Text> : tr('coach.openPhone')}
           </Text>
         </Pressable>
       ) : null}
 
-      <KeyboardAvoidingView style={{ flex: 1, gap: 10 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={90}>
-        <ScrollView ref={scroller} style={{ flex: 1 }} contentContainerStyle={{ gap: 12, paddingBottom: 6 }} onContentSizeChange={() => scroller.current?.scrollToEnd({ animated: true })}>
-          <Bubble role="assistant" text="Hi, I'm your coach. Ask me what to eat, how to hit your protein, or how to build a habit. When I suggest food, I'll give you the recipe with a photo, and you can log it in one tap." />
+      <View style={{ flex: 1, gap: 10 }}>
+        <ScrollView ref={scroller} style={{ flex: 1 }} contentContainerStyle={{ gap: 12, paddingBottom: 6 }} keyboardShouldPersistTaps="handled" onContentSizeChange={() => scroller.current?.scrollToEnd({ animated: true })}>
+          <Bubble role="assistant" text={tr('coach.hello')} />
+          <Muted style={{ fontSize: 12, textAlign: 'center' }}>{tr('coach.savedNote')}</Muted>
           {coach.chat.map((m, i) => (
             <FadeIn key={i}>
               <View style={{ gap: 8 }}>
@@ -86,34 +88,19 @@ export default function Coach() {
         </ScrollView>
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }} style={{ flexGrow: 0 }}>
-          {PROMPTS.map((p) => <Button key={p} label={p} ghost small onPress={() => ask(p)} disabled={busy} />)}
+          {PROMPTS.map((p) => <Button key={p} label={tr(p)} ghost small onPress={() => ask(tr(p))} disabled={busy} />)}
         </ScrollView>
         <View style={{ flexDirection: 'row', gap: 8 }}>
           <TextInput
             value={text} onChangeText={setText} onSubmitEditing={() => ask(text)} returnKeyType="send"
-            placeholder="Ask your coach anything…" placeholderTextColor={t.muted}
+            placeholder={tr('coach.placeholder')} placeholderTextColor={t.muted}
             style={[styles.input, { flex: 1, borderColor: t.line, color: t.ink, backgroundColor: t.surface }]}
           />
-          <Button label="Send" onPress={() => ask(text)} disabled={busy || !text.trim()} />
+          <Button label={tr('coach.send')} onPress={() => ask(text)} disabled={busy || !text.trim()} />
         </View>
-      </KeyboardAvoidingView>
+      </View>
       <RecipeSheet recipe={open} onClose={() => setOpen(null)} />
     </Screen>
   );
 }
 
-function Bubble({ role, text }: { role: 'user' | 'assistant'; text: string }) {
-  const t = useTheme();
-  const me = role === 'user';
-  return (
-    <View
-      style={{
-        alignSelf: me ? 'flex-end' : 'flex-start', maxWidth: '88%', paddingVertical: 10, paddingHorizontal: 13, borderRadius: 16,
-        borderBottomRightRadius: me ? 4 : 16, borderBottomLeftRadius: me ? 16 : 4,
-        backgroundColor: me ? t.accent : t.surface, borderWidth: me ? 0 : 1, borderColor: t.line,
-      }}
-    >
-      <Text style={{ color: me ? t.accentInk : t.ink, lineHeight: 20 }}>{text}</Text>
-    </View>
-  );
-}

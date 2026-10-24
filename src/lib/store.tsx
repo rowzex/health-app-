@@ -2,8 +2,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { Turn } from './ai';
+import type { Account } from './auth';
 import type { CoachAnswer } from './coach';
 import { dateKey, Day, DEFAULT_PROFILE, emptyDay, Entry, Habit, Profile } from './model';
+import { Lang, translator, T } from './i18n';
 import type { Recipe } from './recipes';
 
 const KEY = 'fuel-and-form:v1';
@@ -13,14 +15,28 @@ type Coach = {
   suggested: string[]; // recipe titles already offered, so they aren't offered again
   usedTips: string[];
   answers: Record<string, CoachAnswer>; // same question + same day data -> same answer
+  log: Record<string, Turn[]>; // every chat, by the day it happened, for the Calendar
 };
 
-type Saved = { profile: Profile; days: Record<string, Day>; saved: Recipe[]; coach: Coach };
+type Saved = {
+  profile: Profile;
+  days: Record<string, Day>;
+  saved: Recipe[];
+  coach: Coach;
+  lang: Lang | null; // null until chosen on first launch
+  account: Account | null;
+  signedIn: boolean;
+};
 
-const EMPTY_COACH: Coach = { chat: [], suggested: [], usedTips: [], answers: {} };
+const EMPTY_COACH: Coach = { chat: [], suggested: [], usedTips: [], answers: {}, log: {} };
+const EMPTY: Saved = { profile: DEFAULT_PROFILE, days: {}, saved: [], coach: EMPTY_COACH, lang: null, account: null, signedIn: false };
 
 type Store = Saved & {
   ready: boolean;
+  t: T;
+  setLang: (lang: Lang) => void;
+  signIn: (account: Account) => void;
+  signOut: () => void;
   date: string;
   setDate: (key: string) => void;
   day: Day;
@@ -40,7 +56,7 @@ const Ctx = createContext<Store | null>(null);
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
 export function StoreProvider({ children }: { children: ReactNode }) {
-  const [saved, setSaved] = useState<Saved>({ profile: DEFAULT_PROFILE, days: {}, saved: [], coach: EMPTY_COACH });
+  const [saved, setSaved] = useState<Saved>(EMPTY);
   const [ready, setReady] = useState(false);
   const [date, setDate] = useState(() => dateKey(new Date()));
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -55,6 +71,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           days: parsed.days ?? {},
           saved: parsed.saved ?? [],
           coach: { ...EMPTY_COACH, ...parsed.coach },
+          lang: parsed.lang ?? null,
+          account: parsed.account ?? null,
+          signedIn: parsed.signedIn ?? false,
         });
       })
       .catch(() => {})
@@ -83,6 +102,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     () => ({
       ...saved,
       ready,
+      t: translator(saved.lang ?? 'en'),
+      setLang: (lang) => setSaved((s) => ({ ...s, lang })),
+      signIn: (account) => setSaved((s) => ({ ...s, account, signedIn: true })),
+      signOut: () => setSaved((s) => ({ ...s, signedIn: false })),
       date,
       setDate,
       day: saved.days[date] ?? emptyDay(),
@@ -106,10 +129,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           const keys = Object.keys(c.answers);
           const answers = { ...c.answers, [key]: answer };
           if (keys.length > 80) delete answers[keys[0]];
+          const now = new Date();
+          const today = dateKey(now);
+          const at = now.toTimeString().slice(0, 5);
+          const turns: Turn[] = [{ role: 'user', content: question, at }, { role: 'assistant', content: answer.text, recipes: answer.recipes, at }];
           return {
             ...s,
             coach: {
-              chat: [...c.chat, { role: 'user' as const, content: question }, { role: 'assistant' as const, content: answer.text, recipes: answer.recipes }].slice(-60),
+              chat: [...c.chat, ...turns].slice(-60),
+              log: { ...c.log, [today]: [...(c.log[today] ?? []), ...turns] },
               suggested: [...c.suggested, ...answer.recipes.map((r) => r.title)].slice(-120),
               usedTips: [...c.usedTips, ...(answer.usedTips ?? [])].slice(-40),
               answers,

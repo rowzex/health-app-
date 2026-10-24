@@ -75,11 +75,17 @@ type Raw = {
   }[];
 };
 
-export type Turn = { role: 'user' | 'assistant'; content: string; recipes?: Recipe[] };
+/** `at` is the local time (HH:MM) the message was sent, shown in the Calendar. */
+export type Turn = { role: 'user' | 'assistant'; content: string; recipes?: Recipe[]; at?: string };
 
-export class CoachError extends Error {}
+/** Codes match the 'err.*' strings in i18n. */
+export class CoachError extends Error {
+  constructor(public code: 'auth' | 'access' | 'busy' | 'offline' | 'server' | 'refusal' | 'incomplete') {
+    super(code);
+  }
+}
 
-export async function askClaude(apiKey: string, history: Turn[], question: string, data: unknown, alreadySuggested: string[]): Promise<{ text: string; recipes: Recipe[] }> {
+export async function askClaude(apiKey: string, history: Turn[], question: string, data: unknown, alreadySuggested: string[], language = 'English'): Promise<{ text: string; recipes: Recipe[] }> {
   const past: { role: 'user' | 'assistant'; content: string }[] = history.slice(-12).map((t) => ({
     role: t.role,
     content: t.recipes?.length ? `${t.content}\n\n[Recipes suggested: ${t.recipes.map((r) => r.title).join('; ')}]` : t.content,
@@ -89,7 +95,8 @@ export async function askClaude(apiKey: string, history: Turn[], question: strin
 
   const prompt =
     `${question}\n\n<today>\n${JSON.stringify(data)}\n</today>\n` +
-    (alreadySuggested.length ? `<already_suggested>\n${alreadySuggested.slice(-40).join('\n')}\n</already_suggested>` : '');
+    (alreadySuggested.length ? `<already_suggested>\n${alreadySuggested.slice(-40).join('\n')}\n</already_suggested>\n` : '') +
+    `Write "reply" and every recipe field except imageQuery and mainIngredient in ${language}.`;
 
   // Plain fetch instead of the SDK: the SDK's module graph doesn't load under Expo Go's bundler.
   let res: Response;
@@ -112,23 +119,23 @@ export async function askClaude(apiKey: string, history: Turn[], question: strin
       }),
     });
   } catch {
-    throw new CoachError("Can't reach the coach. Check your internet connection.");
+    throw new CoachError('offline');
   }
 
-  if (res.status === 401) throw new CoachError('Your Claude API key was rejected. Check it in Targets → AI coach.');
-  if (res.status === 403) throw new CoachError("Your API key doesn't have access to this model.");
-  if (res.status === 429 || res.status === 529) throw new CoachError('The coach is busy right now. Try again in a minute.');
-  if (!res.ok) throw new CoachError(`The coach had a problem (${res.status}). Try again.`);
+  if (res.status === 401) throw new CoachError('auth');
+  if (res.status === 403) throw new CoachError('access');
+  if (res.status === 429 || res.status === 529) throw new CoachError('busy');
+  if (!res.ok) throw new CoachError('server');
 
   const response = (await res.json()) as { stop_reason: string; content: { type: string; text?: string }[] };
 
-  if (response.stop_reason === 'refusal') throw new CoachError("The coach can't help with that one. Try asking another way.");
+  if (response.stop_reason === 'refusal') throw new CoachError('refusal');
   const text = response.content.map((b) => (b.type === 'text' ? b.text ?? '' : '')).join('');
   let raw: Raw;
   try {
     raw = JSON.parse(text) as Raw;
   } catch {
-    throw new CoachError('The coach sent an incomplete answer. Try again.');
+    throw new CoachError('incomplete');
   }
 
   const stamp = Date.now().toString(36);

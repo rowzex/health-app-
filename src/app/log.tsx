@@ -13,7 +13,7 @@ import { useTheme } from '../theme';
 
 export default function LogFood() {
   const t = useTheme();
-  const { addEntry } = useStore();
+  const { addEntry, t: tr } = useStore();
   const toast = useToast();
   const [q, setQ] = useState('');
   const [meal, setMeal] = useState<Meal>(mealForNow);
@@ -22,7 +22,7 @@ export default function LogFood() {
   const add = (f: Food) => {
     addEntry({ ...f, meal });
     haptic.success();
-    toast(`Added ${f.name} to ${meal}`);
+    toast(tr('log.added', { name: f.name, meal: tr(`meal.${meal}`) }));
   };
   const addCustom = () => {
     const kcal = Number(custom.kcal);
@@ -34,21 +34,21 @@ export default function LogFood() {
 
   return (
     <Screen>
-      <Card title="Log food">
+      <Card title={tr('log.title')}>
         <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
           {MEALS.map((m) => (
-            <Chip key={m} label={m} on={m === meal} onPress={() => { haptic.tap(); setMeal(m); }} />
+            <Chip key={m} label={tr(`meal.${m}`)} on={m === meal} onPress={() => { haptic.tap(); setMeal(m); }} />
           ))}
         </View>
         <TextInput
-          value={q} onChangeText={setQ} placeholder="Search foods: chicken, oats, banana…"
+          value={q} onChangeText={setQ} placeholder={tr('log.search')}
           placeholderTextColor={t.muted} style={input} autoCorrect={false} clearButtonMode="while-editing"
         />
         <View style={{ gap: 2 }}>
           {searchFoods(q).map((f, i) => (
             <FadeIn key={f.name} delay={Math.min(i, 8) * 25}>
             <PressScale
-              onPress={() => add(f)} accessibilityRole="button" accessibilityLabel={`Add ${f.name}`}
+              onPress={() => add(f)} accessibilityRole="button" accessibilityLabel={tr('log.addItem', { name: f.name })}
               style={[styles.rowBetween, { paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: t.line, gap: 10 }]}
             >
               <FoodThumb img={f.img} name={f.name} size={40} />
@@ -60,22 +60,22 @@ export default function LogFood() {
             </PressScale>
             </FadeIn>
           ))}
-          {searchFoods(q).length === 0 ? <Muted>No match. Add it as a custom food below.</Muted> : null}
+          {searchFoods(q).length === 0 ? <Muted>{tr('log.noMatch')}</Muted> : null}
         </View>
       </Card>
 
-      <Card title="Custom food">
-        <TextInput value={custom.name} onChangeText={(name) => setCustom({ ...custom, name })} placeholder="Name, e.g. Homemade lasagna" placeholderTextColor={t.muted} style={input} />
+      <Card title={tr('log.custom')}>
+        <TextInput value={custom.name} onChangeText={(name) => setCustom({ ...custom, name })} placeholder={tr('log.customName')} placeholderTextColor={t.muted} style={input} />
         <View style={{ flexDirection: 'row', gap: 6 }}>
           {(['kcal', 'p', 'c', 'f'] as const).map((k) => (
             <TextInput
               key={k} value={custom[k]} onChangeText={(v) => setCustom({ ...custom, [k]: v })} keyboardType="decimal-pad"
-              placeholder={{ kcal: 'kcal', p: 'Protein g', c: 'Carbs g', f: 'Fat g' }[k]} placeholderTextColor={t.muted}
+              placeholder={{ kcal: tr('kcal'), p: tr('log.p'), c: tr('log.c'), f: tr('log.f') }[k]} placeholderTextColor={t.muted}
               style={[...input, { flex: 1, paddingHorizontal: 8 }]}
             />
           ))}
         </View>
-        <Button label={`Add to ${meal}`} onPress={addCustom} disabled={!custom.name.trim() || !Number(custom.kcal)} />
+        <Button label={tr('log.addTo', { meal: tr(`meal.${meal}`) })} onPress={addCustom} disabled={!custom.name.trim() || !Number(custom.kcal)} />
       </Card>
     </Screen>
   );

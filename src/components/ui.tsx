@@ -1,8 +1,9 @@
-import { ReactNode, useEffect, useRef } from 'react';
-import { Animated, Easing, Pressable, ScrollView, StyleSheet, Text, TextStyle, View, ViewStyle } from 'react-native';
+import { ReactNode, RefObject, useEffect, useRef, useState } from 'react';
+import { Animated, Easing, Keyboard, LayoutAnimation, Platform, Pressable, ScrollView, ScrollViewInstance, StyleSheet, Text, TextInput, TextStyle, View, ViewInstance, ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 
+import { LOCALE } from '../lib/i18n';
 import { dateKey, shiftKey } from '../lib/model';
 import { useStore } from '../lib/store';
 import { useTheme } from '../theme';
@@ -19,17 +20,62 @@ function useTween(value: number, duration = 650) {
   return v;
 }
 
-export function Screen({ children, scroll = true }: { children: ReactNode; scroll?: boolean }) {
+/**
+ * How much of `ref`'s view the keyboard covers. Measured against the keyboard's top edge,
+ * so it works whether or not the phone also resizes the window (Android edge-to-edge doesn't).
+ */
+function useKeyboardInset(ref: RefObject<ViewInstance | null>, onShown?: (keyboardTop: number) => void) {
+  const [inset, setInset] = useState(0);
+  useEffect(() => {
+    const ios = Platform.OS === 'ios';
+    const show = Keyboard.addListener(ios ? 'keyboardWillShow' : 'keyboardDidShow', (e) => {
+      const top = e.endCoordinates.screenY;
+      ref.current?.measureInWindow((_x, y, _w, h) => {
+        if (ios) LayoutAnimation.configureNext(LayoutAnimation.create(e.duration || 250, 'keyboard', 'opacity'));
+        setInset(Math.max(0, Math.round(y + h - top)));
+        setTimeout(() => onShown?.(top), ios ? (e.duration || 250) + 30 : 60);
+      });
+    });
+    const hide = Keyboard.addListener(ios ? 'keyboardWillHide' : 'keyboardDidHide', (e) => {
+      if (ios) LayoutAnimation.configureNext(LayoutAnimation.create(e.duration || 250, 'keyboard', 'opacity'));
+      setInset(0);
+    });
+    return () => { show.remove(); hide.remove(); };
+  }, [ref, onShown]);
+  return inset;
+}
+
+/** Page wrapper. Keeps the focused text box above the phone keyboard. */
+export function Screen({ children, scroll = true, onKeyboard }: { children: ReactNode; scroll?: boolean; onKeyboard?: () => void }) {
   const t = useTheme();
+  const box = useRef<ViewInstance>(null);
+  const scroller = useRef<ScrollViewInstance>(null);
+  const offset = useRef(0);
+  const shown = useRef((keyboardTop: number) => {
+    onKeyboard?.();
+    // Scroll the focused field into view if it is still under the keyboard.
+    const input = TextInput.State.currentlyFocusedInput?.();
+    if (!input || !scroller.current) return;
+    input.measureInWindow((_x, y, _w, h) => {
+      const hidden = y + h + 12 - keyboardTop;
+      if (hidden > 0) scroller.current?.scrollTo({ y: offset.current + hidden, animated: true });
+    });
+  }).current;
+  const inset = useKeyboardInset(box, shown);
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.bg }} edges={['top', 'left', 'right']}>
-      {scroll ? (
-        <ScrollView contentContainerStyle={styles.screen} keyboardShouldPersistTaps="handled">
-          {children}
-        </ScrollView>
-      ) : (
-        <View style={[styles.screen, { flex: 1 }]}>{children}</View>
-      )}
+      <View ref={box} style={{ flex: 1, paddingBottom: inset }}>
+        {scroll ? (
+          <ScrollView
+            ref={scroller} contentContainerStyle={styles.screen} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag"
+            onScroll={(e) => { offset.current = e.nativeEvent.contentOffset.y; }} scrollEventThrottle={32}
+          >
+            {children}
+          </ScrollView>
+        ) : (
+          <View style={[styles.screen, { flex: 1, paddingBottom: 12 }]}>{children}</View>
+        )}
+      </View>
     </SafeAreaView>
   );
 }
@@ -75,6 +121,7 @@ export function Ring({ value, goal, size = 168 }: { value: number; goal: number;
   const r = 50;
   const c = 2 * Math.PI * r;
   const pct = Math.min(1, goal > 0 ? value / goal : 0);
+  const { t: tr } = useStore();
   const left = Math.round(goal - value);
   const progress = useTween(pct);
   return (
@@ -89,7 +136,7 @@ export function Ring({ value, goal, size = 168 }: { value: number; goal: number;
       </Svg>
       <View style={[StyleSheet.absoluteFill, styles.center]}>
         <Text style={[styles.ringNum, { color: t.ink }]}>{Math.abs(left).toLocaleString()}</Text>
-        <Text style={[styles.ringLbl, { color: t.muted }]}>{left >= 0 ? 'KCAL LEFT' : 'KCAL OVER'}</Text>
+        <Text style={[styles.ringLbl, { color: t.muted }]}>{left >= 0 ? tr('ring.left') : tr('ring.over')}</Text>
       </View>
     </View>
   );
@@ -116,27 +163,44 @@ export function MacroBar({ label, value, goal, color }: { label: string; value: 
 /** Previous / next day switcher shared by the Today and Habits tabs. */
 export function DayHeader({ title }: { title: string }) {
   const t = useTheme();
-  const { date, setDate } = useStore();
+  const { date, setDate, t: tr, lang } = useStore();
   const today = dateKey(new Date());
   const [y, m, d] = date.split('-').map(Number);
   const label =
-    date === today ? 'Today' : date === shiftKey(today, -1) ? 'Yesterday'
-      : new Date(y, m - 1, d).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+    date === today ? tr('day.today') : date === shiftKey(today, -1) ? tr('day.yesterday')
+      : new Date(y, m - 1, d).toLocaleDateString(LOCALE[lang ?? 'en'], { weekday: 'short', day: 'numeric', month: 'short' });
   return (
     <View style={styles.dayHeader}>
       <Text style={[styles.brand, { color: t.ink }]}>{title}</Text>
       <View style={styles.dayNav}>
-        <Pressable accessibilityLabel="Previous day" onPress={() => { haptic.tap(); setDate(shiftKey(date, -1)); }} style={[styles.navBtn, { borderColor: t.line }]}>
+        <Pressable accessibilityLabel={tr('day.prev')} onPress={() => { haptic.tap(); setDate(shiftKey(date, -1)); }} style={[styles.navBtn, { borderColor: t.line }]}>
           <Text style={{ color: t.ink, fontSize: 18 }}>‹</Text>
         </Pressable>
-        <Text style={[styles.dayLabel, { color: t.ink }]}>{label.toUpperCase()}</Text>
+        <Text style={[styles.dayLabel, { color: t.ink }]}>{label.toLocaleUpperCase()}</Text>
         <Pressable
-          accessibilityLabel="Next day" disabled={date >= today} onPress={() => { haptic.tap(); setDate(shiftKey(date, 1)); }}
+          accessibilityLabel={tr('day.next')} disabled={date >= today} onPress={() => { haptic.tap(); setDate(shiftKey(date, 1)); }}
           style={[styles.navBtn, { borderColor: t.line, opacity: date >= today ? 0.35 : 1 }]}
         >
           <Text style={{ color: t.ink, fontSize: 18 }}>›</Text>
         </Pressable>
       </View>
+    </View>
+  );
+}
+
+/** One chat message, used by the Coach tab and the Calendar. */
+export function Bubble({ role, text }: { role: 'user' | 'assistant'; text: string }) {
+  const t = useTheme();
+  const me = role === 'user';
+  return (
+    <View
+      style={{
+        alignSelf: me ? 'flex-end' : 'flex-start', maxWidth: '88%', paddingVertical: 10, paddingHorizontal: 13, borderRadius: 16,
+        borderBottomRightRadius: me ? 4 : 16, borderBottomLeftRadius: me ? 16 : 4,
+        backgroundColor: me ? t.accent : t.surface, borderWidth: me ? 0 : 1, borderColor: t.line,
+      }}
+    >
+      <Text style={{ color: me ? t.accentInk : t.ink, lineHeight: 20 }}>{text}</Text>
     </View>
   );
 }

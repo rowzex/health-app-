@@ -44,13 +44,14 @@ export function RecipePhoto({ recipe, height, radius = 12 }: { recipe: Recipe; h
 
 export function RecipeCard({ recipe, onPress, width = 200 }: { recipe: Recipe; onPress: () => void; width?: number }) {
   const t = useTheme();
+  const { t: tr } = useStore();
   return (
     <PressScale onPress={onPress} accessibilityRole="button" accessibilityLabel={`${recipe.title}, ${recipe.kcal} calories`} style={{ width, backgroundColor: t.surface, borderRadius: 14, borderWidth: 1, borderColor: t.line, overflow: 'hidden' }}>
       <RecipePhoto recipe={recipe} height={width * 0.62} radius={0} />
       <View style={{ padding: 10, gap: 3 }}>
         <Text numberOfLines={2} style={{ color: t.ink, fontWeight: '700', fontSize: 14 }}>{recipe.title}</Text>
         <Text style={{ color: t.muted, fontSize: 12 }}>
-          <Text style={{ color: t.accent, fontWeight: '700' }}>{recipe.kcal} kcal</Text> · {recipe.p} g protein · {recipe.minutes} min
+          <Text style={{ color: t.accent, fontWeight: '700' }}>{recipe.kcal} {tr('kcal')}</Text> · {tr('recipe.gProtein', { n: recipe.p })} · {recipe.minutes} {tr('min')}
         </Text>
       </View>
     </PressScale>
@@ -62,7 +63,7 @@ export function RecipeSheet({ recipe, onClose }: { recipe: Recipe | null; onClos
   const t = useTheme();
   const insets = useSafeAreaInsets();
   const toast = useToast();
-  const { addEntry, saved, toggleSaved } = useStore();
+  const { addEntry, saved, toggleSaved, t: tr } = useStore();
   const [meal, setMeal] = useState<Meal | null>(null);
   if (!recipe) return null;
   const chosen = meal ?? recipe.meal;
@@ -71,30 +72,30 @@ export function RecipeSheet({ recipe, onClose }: { recipe: Recipe | null; onClos
   const log = () => {
     addEntry({ name: recipe.title, kcal: recipe.kcal, p: recipe.p, c: recipe.c, f: recipe.f, meal: chosen, img: recipe.mainIngredient });
     haptic.success();
-    toast(`Logged ${recipe.title} to ${chosen}`);
+    toast(tr('recipe.logged', { name: recipe.title, meal: tr(`meal.${chosen}`) }));
     setMeal(null);
     onClose();
   };
 
   return (
     <Modal visible animationType="slide" transparent onRequestClose={onClose}>
-      <Pressable style={{ flex: 1, backgroundColor: '#0008' }} onPress={onClose} accessibilityLabel="Close recipe" />
+      <Pressable style={{ flex: 1, backgroundColor: '#0008' }} onPress={onClose} accessibilityLabel={tr('recipe.close')} />
       <View style={{ maxHeight: '88%', backgroundColor: t.bg, borderTopLeftRadius: 22, borderTopRightRadius: 22, overflow: 'hidden' }}>
         <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 16 }}>
           <RecipePhoto recipe={recipe} height={220} radius={0} />
           <View style={{ padding: 18, gap: 14 }}>
             <View style={{ gap: 4 }}>
               <Text style={{ color: t.ink, fontSize: 22, fontWeight: '800' }}>{recipe.title}</Text>
-              <Muted>{recipe.meal} · {recipe.minutes} min · per serving</Muted>
+              <Muted>{tr(`meal.${recipe.meal}`)} · {recipe.minutes} {tr('min')} · {tr('recipe.perServing')}</Muted>
               {recipe.why ? <Text style={{ color: t.ink, marginTop: 4 }}>{recipe.why}</Text> : null}
             </View>
 
             <View style={{ flexDirection: 'row', gap: 8 }}>
               {[
-                [String(recipe.kcal), 'kcal', t.accent],
-                [`${recipe.p} g`, 'protein', t.protein],
-                [`${recipe.c} g`, 'carbs', t.carbs],
-                [`${recipe.f} g`, 'fat', t.fat],
+                [String(recipe.kcal), tr('kcal'), t.accent],
+                [`${recipe.p} g`, tr('protein'), t.protein],
+                [`${recipe.c} g`, tr('carbs'), t.carbs],
+                [`${recipe.f} g`, tr('fat'), t.fat],
               ].map(([v, l, c]) => (
                 <View key={l} style={{ flex: 1, backgroundColor: t.surface, borderRadius: 10, paddingVertical: 10, alignItems: 'center', borderWidth: 1, borderColor: t.line }}>
                   <Text style={{ color: c, fontWeight: '800', fontSize: 17 }}>{v}</Text>
@@ -104,14 +105,14 @@ export function RecipeSheet({ recipe, onClose }: { recipe: Recipe | null; onClos
             </View>
 
             <View style={{ gap: 6 }}>
-              <Text style={{ color: t.ink, fontWeight: '800', letterSpacing: 1 }}>INGREDIENTS</Text>
+              <Text style={{ color: t.ink, fontWeight: '800', letterSpacing: 1 }}>{tr('recipe.ingredients')}</Text>
               {recipe.ingredients.map((x, i) => (
                 <Text key={i} style={{ color: t.ink }}>•  {x}</Text>
               ))}
             </View>
 
             <View style={{ gap: 8 }}>
-              <Text style={{ color: t.ink, fontWeight: '800', letterSpacing: 1 }}>STEPS</Text>
+              <Text style={{ color: t.ink, fontWeight: '800', letterSpacing: 1 }}>{tr('recipe.steps')}</Text>
               {recipe.steps.map((x, i) => (
                 <View key={i} style={{ flexDirection: 'row', gap: 10 }}>
                   <Text style={{ color: t.accent, fontWeight: '800', width: 18 }}>{i + 1}</Text>
@@ -121,23 +122,23 @@ export function RecipeSheet({ recipe, onClose }: { recipe: Recipe | null; onClos
             </View>
 
             <View style={{ gap: 8 }}>
-              <Muted>Log it as</Muted>
+              <Muted>{tr('recipe.logAs')}</Muted>
               <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
                 {MEALS.map((m) => (
                   <Pressable
                     key={m} onPress={() => { haptic.tap(); setMeal(m); }} accessibilityState={{ selected: m === chosen }}
                     style={{ paddingVertical: 6, paddingHorizontal: 12, borderRadius: 999, borderWidth: 1, borderColor: m === chosen ? t.accent : t.line, backgroundColor: m === chosen ? t.accent : 'transparent' }}
                   >
-                    <Text style={{ color: m === chosen ? t.accentInk : t.ink, fontWeight: '600', fontSize: 13 }}>{m}</Text>
+                    <Text style={{ color: m === chosen ? t.accentInk : t.ink, fontWeight: '600', fontSize: 13 }}>{tr(`meal.${m}`)}</Text>
                   </Pressable>
                 ))}
               </View>
             </View>
 
             <View style={{ flexDirection: 'row', gap: 8 }}>
-              <View style={{ flex: 2 }}><Button label={`Log to ${chosen}`} onPress={log} /></View>
+              <View style={{ flex: 2 }}><Button label={tr('recipe.logTo', { meal: tr(`meal.${chosen}`) })} onPress={log} /></View>
               <View style={{ flex: 1 }}>
-                <Button ghost label={isSaved ? 'Saved ✓' : 'Save'} onPress={() => { haptic.tap(); toggleSaved(recipe); toast(isSaved ? 'Removed from saved' : 'Saved to Recipes'); }} />
+                <Button ghost label={isSaved ? tr('recipe.saved') : tr('save')} onPress={() => { haptic.tap(); toggleSaved(recipe); toast(isSaved ? tr('recipe.unsaved') : tr('recipe.savedToast')); }} />
               </View>
             </View>
           </View>

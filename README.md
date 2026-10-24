@@ -29,6 +29,12 @@ a small server so users don't need their own key.
 
 Food and recipe photos come from TheMealDB's free API, matched by dish type.
 
+## Languages and accounts
+
+On first launch the app asks for a language (English, French, Arabic or Spanish), then for an email sign-up. The AI coach answers in the chosen language. Food and recipe names stay in English for now.
+
+Without extra setup, the account is kept on the phone only. For real accounts that work on any phone, create a free project at supabase.com, copy `.env.example` to `.env.local`, fill in the project URL and anon key from Supabase (Project settings, API), and restart with `npx expo start -c`.
+
 ## Checks
 
 ```bash
