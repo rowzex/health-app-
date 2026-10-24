@@ -14,6 +14,7 @@
       "package": "com.fuelandform.app"
     },
     "web": {},
-    "scheme": "fuelandform"
+    "scheme": "fuelandform",
+    "sdkVersion": "58.0.0"
   }
 }
