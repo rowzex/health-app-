@@ -48,7 +48,8 @@ function Gate() {
       <Tabs.Screen name="habits" options={{ title: tr('tab.habits') }} />
       <Tabs.Screen name="coach" options={{ title: tr('tab.coach') }} />
       <Tabs.Screen name="calendar" options={{ title: tr('tab.calendar') }} />
-      <Tabs.Screen name="profile" options={{ title: tr('tab.targets'), href: null }} />
+      {/* Not a tab: opened from the Today screen. (`href: null` would block navigating to it.) */}
+      <Tabs.Screen name="profile" options={{ title: tr('tab.targets'), tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }} />
     </Tabs>
   );
 }
